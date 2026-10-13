@@ -1,12 +1,12 @@
 ﻿import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, configure_mappers
 from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
 from app.db import models  # noqa: F401
-from app.db.models import User
+from app.db.models import Practitioner, Patient, User
 
 
 @pytest.fixture
@@ -32,7 +32,17 @@ def db_session():
     engine.dispose()
 
 
-def test_all_six_tables_are_created(db_session):
+def test_sqlalchemy_mapper_configures():
+    configure_mappers()
+    relationship = Practitioner.patients.property
+    assert relationship.secondary.name == "doctor_patients"
+    assert relationship.back_populates == "practitioners"
+    inverse = Patient.practitioners.property
+    assert inverse.secondary.name == "doctor_patients"
+    assert inverse.back_populates == "patients"
+
+
+def test_all_tables_are_created(db_session):
     inspector = inspect(db_session.get_bind())
     expected = {
         "users",
@@ -41,6 +51,7 @@ def test_all_six_tables_are_created(db_session):
         "working_hours",
         "appointments",
         "queue_entries",
+        "doctor_patients",
     }
     assert expected.issubset(set(inspector.get_table_names()))
 

@@ -13,11 +13,28 @@ from sqlalchemy import (
     Time,
     UniqueConstraint,
     func,
+    Column,
+    Table,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
+
+doctor_patients = Table(
+    "doctor_patients",
+    Base.metadata,
+    Column(
+        "practitioner_id",
+        ForeignKey("practitioners.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "patient_id",
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
 
 class User(Base):
     __tablename__ = "users"
@@ -71,6 +88,10 @@ class Practitioner(Base):
     appointments: Mapped[list[Appointment]] = relationship(
         back_populates="practitioner"
     )
+    patients: Mapped[list[Patient]] = relationship(
+        secondary=doctor_patients,
+        back_populates="practitioners",
+    )
     queue_entries: Mapped[list[QueueEntry]] = relationship(
         back_populates="practitioner"
     )
@@ -94,6 +115,10 @@ class Patient(Base):
 
     creator: Mapped[User] = relationship(
         back_populates="created_patients", foreign_keys=[created_by_user_id]
+    )
+    practitioners: Mapped[list[Practitioner]] = relationship(
+        secondary=doctor_patients,
+        back_populates="patients",
     )
     appointments: Mapped[list[Appointment]] = relationship(
         back_populates="patient"
